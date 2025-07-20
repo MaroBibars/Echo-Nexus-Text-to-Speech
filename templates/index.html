@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Riot Style Voice to Text</title>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
+
+        body {
+            background-color: #0b0e1a;
+            color: #e0d6b3;
+            font-family: 'Orbitron', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #dac47a;
+            text-shadow: 0 0 6px #dac47a44;
+        }
+
+        button {
+            background-color: #2e1a47;
+            color: #e0d6b3;
+            border: 2px solid #dac47a88;
+            padding: 12px 28px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 0 3px #00000033;
+            transition: 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #402560;
+            box-shadow: 0 0 6px #dac47a88;
+        }
+
+        #status, #result {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #b9b9b9;
+            text-shadow: 0 0 4px #dac47a33;
+        }
+
+        strong {
+            color: #dac47a;
+            text-shadow: 0 0 4px #dac47a44;
+        }
+
+        .loader {
+            display: none;
+            margin: 20px auto;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #dac47a 20%, transparent 60%);
+            animation: ultCharge 1.2s ease-in-out infinite;
+        }
+
+        @keyframes ultCharge {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.5; }
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            bottom: 16px;
+            border: 2px solid #00ff9c88;
+            border-radius: 10px;
+            box-shadow: inset 0 0 12px #00000066;
+            pointer-events: none;
+        }
+
+            /* flicker animation */
+            @keyframes pulseText {
+                0% { opacity: 1; }
+                50% { opacity: 0.6; }
+                100% { opacity: 1; }
+            }
+
+            #result.pulse {
+                animation: pulseText 1.2s ease-in-out 2;
+            }
+            #quote-box {
+                position: absolute;
+                bottom: 20px;
+                left: 20px;
+                max-width: 40%;
+                font-size: 14px;
+                color: #dac47a;
+                opacity: 0.8;
+                text-shadow: 0 0 6px #00000088;
+                font-style: italic;
+                animation: fadeIn 1s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 0.8; }
+    }
+
+    </style>
+</head>
+<body>
+
+    <h1>VOICE ↯ TO ↯ TEXT</h1>
+    <button id="record-button">Start Recording</button>
+    <div class="loader" id="loader"></div>
+    <p id="status"></p>
+    <p><strong>Transcription:</strong> <span id="result"></span></p>
+    <div id="quote-box"></div>
+
+
+    <script>
+        const recordButton = document.getElementById("record-button");
+        const statusText = document.getElementById("status");
+        const resultText = document.getElementById("result");
+        const loader = document.getElementById("loader");
+
+        const riotSfx = new Audio("/static/soundLoL.mp3");
+        const resultSfx = new Audio("/static/mission_complete.mp3"); 
+        riotSfx.volume = 1;
+        resultSfx.volume = 0.5;
+
+        let mediaRecorder;
+        let audioChunks = [];
+
+        recordButton.onclick = async () => {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+                statusText.textContent = "Processing your speech...";
+                loader.style.display = "block";
+                return;
+            }
+
+            riotSfx.play();
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const formData = new FormData();
+                formData.append("audio", audioBlob, "recording.wav");
+
+                try {
+                    const response = await fetch("/transcribe", {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    statusText.textContent = "";
+                    resultText.textContent = data.transcription || data.error;
+
+                    // Result pulse + SFX
+                    resultSfx.play();
+                    resultText.classList.remove("pulse");
+                    void resultText.offsetWidth;  // trigger reflow
+                    resultText.classList.add("pulse");
+
+                } catch (err) {
+                    statusText.textContent = "Something went wrong...";
+                } finally {
+                    loader.style.display = "none";
+                }
+            };
+
+            mediaRecorder.start();
+            statusText.textContent = "Recording... click again to stop.";
+        };
+        const quotes = [
+            `"Art requires a certain... cruelty." — Jhin`,
+            `"The time of man has come to an end." — Nasus`,
+            `"The world is cruel. It doesn't have to be." — Kayle`,
+            `"This place is beautiful... and deadly." — Ahri`,
+            `"Screams... follow me everywhere." — Sion`,
+            `"Only perfection is acceptable." — Camille`,
+            `"They are puppets... and I, their master." — LeBlanc`
+        ];
+
+        function displayRandomQuote() {
+            const quoteBox = document.getElementById("quote-box");
+            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+            quoteBox.textContent = randomQuote;
+    }
+
+    setInterval(displayRandomQuote, 7000);
+    displayRandomQuote(); // initial quote
+    </script>
+</body>
+</html>

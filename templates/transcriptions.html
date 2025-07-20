@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Your Transcriptions</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
+
+        body {
+            background-color: #0b0e1a;
+            color: #dac47a;
+            font-family: 'Orbitron', sans-serif;
+            margin: 40px;
+        }
+        h2 {
+            font-size: 32px;
+            margin-bottom: 24px;
+            text-shadow: 0 0 8px #dac47a66;
+        }
+        a {
+            color: #00ff9c;
+            text-decoration: none;
+            margin-right: 20px;
+            font-weight: bold;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+            max-width: 600px;
+        }
+        li {
+            background-color: #2e1a47;
+            border: 2px solid #00ff9c88;
+            margin-bottom: 14px;
+            padding: 16px 24px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #00ff9c88;
+            position: relative;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #b9b9b9;
+            margin-bottom: 6px;
+            font-style: italic;
+            text-shadow: 0 0 4px #000000bb;
+        }
+        .content {
+            font-size: 18px;
+            line-height: 1.4;
+        }
+        form {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+        }
+        button {
+            background-color: #dac47a;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 0 6px #dac47aaa;
+            transition: background-color 0.3s ease;
+            color: #0b0e1a;
+        }
+        button:hover {
+            background-color: #b8a44d;
+            box-shadow: 0 0 10px #b8a44ddd;
+        }
+    </style>
+</head>
+<body>
+    <h2>Your Transcriptions</h2>
+
+    <!-- Navigation -->
+    <a href="{{ url_for('index') }}">Home</a>
+    <a href="{{ url_for('logout') }}">Logout</a>
+
+    <ul>
+        {% for t in transcriptions %}
+        <li>
+            <div class="timestamp">{{ t.timestamp.strftime('%Y-%m-%d %H:%M') }}</div>
+            <div class="content">{{ t.content }}</div>
+            <!-- Delete transcription -->
+            <form method="POST" action="{{ url_for('delete_transcription', id=t.id) }}">
+                <button type="submit">Delete</button>
+            </form>
+        </li>
+        {% else %}
+        <li>No transcriptions yet.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
